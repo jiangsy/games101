@@ -1,0 +1,7 @@
+CMakeFiles/
+Testing/
+.idea/
+.vscode/
+*.pdf
+CMakeCache.txt
+cmake_install.cmake
