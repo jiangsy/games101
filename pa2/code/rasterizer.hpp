@@ -57,7 +57,7 @@ namespace rst
     class rasterizer
     {
     public:
-        rasterizer(int w, int h);
+        rasterizer(int w, int h, int num_samples=1);
         pos_buf_id load_positions(const std::vector<Eigen::Vector3f>& positions);
         ind_buf_id load_indices(const std::vector<Eigen::Vector3i>& indices);
         col_buf_id load_colors(const std::vector<Eigen::Vector3f>& colors);
@@ -66,7 +66,8 @@ namespace rst
         void set_view(const Eigen::Matrix4f& v);
         void set_projection(const Eigen::Matrix4f& p);
 
-        void set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
+        void set_pixel_color(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
+        void add_pixel_color(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
 
         void clear(Buffers buff);
 
@@ -94,8 +95,10 @@ namespace rst
 
         std::vector<float> depth_buf;
         int get_index(int x, int y);
+        int get_sub_index(int x, int y, int x_sub, int y_sub);
 
         int width, height;
+        int num_samples;
 
         int next_id = 0;
         int get_next_id() { return next_id++; }

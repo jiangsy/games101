@@ -28,10 +28,16 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     return model;
 }
 
-Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
+Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
+                                      float zNear, float zFar)
 {
-    // TODO: Copy-paste your implementation from the previous assignment.
-    Eigen::Matrix4f projection;
+    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+
+    double y_ratio = 1.0 / std::tan(eye_fov / 2.0 * MY_PI / 180.0);
+    projection << y_ratio / aspect_ratio, 0, 0, 0,
+                  0, y_ratio, 0, 0,
+                  0, 0, -(zFar+zNear)/(zFar-zNear), -2*(zFar*zNear)/(zFar-zNear),
+                  0, 0, -1, 0;
 
     return projection;
 }
@@ -48,7 +54,7 @@ int main(int argc, const char** argv)
         filename = std::string(argv[1]);
     }
 
-    rst::rasterizer r(700, 700);
+    rst::rasterizer r(700, 700, 2);
 
     Eigen::Vector3f eye_pos = {0,0,5};
 
