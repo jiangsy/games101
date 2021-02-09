@@ -39,21 +39,21 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
 }
 
-// function interface has been modified for msaa bonus
-// static bool insideTriangle(int x, int y, const Vector3f* _v)
 static bool insideTriangle(float x, float y, const Vector3f* _v)
 {
     Eigen::Vector3f pt;
     pt << (float)x, (float)y, 0.0f;
-    bool signs[3];
 
     for (int i=0; i<3; i++) {
         Eigen::Vector3f edge1 = _v[(i+1)%3] - _v[i];
         Eigen::Vector3f edge2 = pt - _v[i];
-        signs[i] = edge1.cross(edge2)[2] > 0;
+        bool sign = edge1.cross(edge2).z() > 0.f;
+        if (!sign) {
+            return false;
+        }
     }
 
-    return (signs[0] && signs[1] && signs[2]) || (!signs[0] && !signs[1] && !signs[2]);
+    return true;
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
