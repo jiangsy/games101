@@ -261,7 +261,9 @@ int main(int argc, const char** argv)
     std::string obj_path = "./models/spot/";
 
     // Load .obj File
+    assert(std::filesystem::exists("./models/spot/spot_triangulated_good.obj"));
     bool loadout = Loader.LoadFile("./models/spot/spot_triangulated_good.obj");
+
     for(auto mesh:Loader.LoadedMeshes)
     {
         for(int i=0;i<mesh.Vertices.size();i+=3)
@@ -279,7 +281,7 @@ int main(int argc, const char** argv)
 
     rst::rasterizer r(700, 700);
     auto texture_path = "spot_texture.png";
-    assert(std::ifstream(obj_path + texture_path).good());
+    assert(std::filesystem::exists(obj_path + texture_path));
     r.set_texture(Texture(obj_path + texture_path));
     std::function<Eigen::Vector3f(fragment_shader_payload)> active_shader = texture_fragment_shader;
 

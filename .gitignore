@@ -5,3 +5,5 @@ Testing/
 *.pdf
 CMakeCache.txt
 cmake_install.cmake
+*.cbp
+Rasterizer
