@@ -25,15 +25,15 @@ void draw_dot(const cv::Point2f &point, cv::Mat window, const cv::Vec3b &color,
         int x2 = std::ceil(point.x + radius);
         int y1 = std::floor(point.y - radius);
         int y2 = std::ceil(point.y + radius);
-        for (int x = y1; x < y2; x++) {
-            for (int y = x1; y < x2; y++) {
-                auto dist = std::sqrt(std::pow(point.y - x - 0.5f, 2.0f) +
-                                      std::pow(point.x - y - 0.5f, 2.0f));
-                dist = dist / radius / 2.0f;
-                if (dist < 1.0f)
+        for (int x=y1; x<y2; x++) {
+            for (int y=x1; y<x2; y++) {
+                auto dist = std::sqrt(std::pow(point.y-x -0.5f, 2.0f) +
+                                      std::pow(point.x-y-0.5f, 2.0f));
+                dist = dist/radius/2.0f;
+                if (dist < 2*radius)
                     dist = std::pow(dist, cr);
                 for (int i=0; i<3; i++)
-                    window.at<cv::Vec3b>(x, y)[i]=std::max(color[i] * (1.0f - dist),
+                    window.at<cv::Vec3b>(x, y)[i]=std::max(color[i] * (1.0f-dist),
                                                            float(window.at<cv::Vec3b>(x, y)[i]));
             }
         }
