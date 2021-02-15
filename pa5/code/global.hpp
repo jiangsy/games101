@@ -4,7 +4,6 @@
 #include <iostream>
 #include <random>
 
-#define M_PI 3.14159265358979323846
 
 constexpr float kInfinity = std::numeric_limits<float>::max();
 
