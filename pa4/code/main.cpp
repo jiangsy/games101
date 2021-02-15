@@ -15,6 +15,33 @@ void mouse_handler(int event, int x, int y, int flags, void *userdata)
     }     
 }
 
+void draw_dot(const cv::Point2f &point, cv::Mat window, const cv::Vec3b &color,
+              bool anti_aliasing=false) {
+    if (anti_aliasing) {
+        auto radius = 0.5f;
+        auto cr = 1.1f;
+
+        int x1 = std::floor(point.x - radius);
+        int x2 = std::ceil(point.x + radius);
+        int y1 = std::floor(point.y - radius);
+        int y2 = std::ceil(point.y + radius);
+        for (int x = y1; x < y2; x++) {
+            for (int y = x1; y < x2; y++) {
+                auto dist = std::sqrt(std::pow(point.y - x - 0.5f, 2.0f) +
+                                      std::pow(point.x - y - 0.5f, 2.0f));
+                dist = dist / radius / 2.0f;
+                if (dist < 1.0f)
+                    dist = std::pow(dist, cr);
+                for (int i=0; i<3; i++)
+                    window.at<cv::Vec3b>(x, y)[i]=std::max(color[i] * (1.0f - dist),
+                                                           float(window.at<cv::Vec3b>(x, y)[i]));
+            }
+        }
+    } else {
+        window.at<cv::Vec3b>(point.y, point.x)=color;
+    }
+}
+
 void naive_bezier(const std::vector<cv::Point2f> &points, cv::Mat &window)
 {
     auto &p_0 = points[0];
@@ -26,8 +53,7 @@ void naive_bezier(const std::vector<cv::Point2f> &points, cv::Mat &window)
     {
         auto point = std::pow(1 - t, 3) * p_0 + 3 * t * std::pow(1 - t, 2) * p_1 +
                  3 * std::pow(t, 2) * (1 - t) * p_2 + std::pow(t, 3) * p_3;
-
-        window.at<cv::Vec3b>(point.y, point.x)[2] = 255;
+        draw_dot(point, window, cv::Vec3b(0, 0, 255),false);
     }
 }
 
@@ -46,28 +72,13 @@ cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points, flo
 
 void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
-    auto radius = 0.5f;
-    auto cr = 0.7f;
 
     for (double t = 0.0; t <= 1.0; t += 0.001) {
         auto point = recursive_bezier(control_points, t);
-
-        int x1 = std::floor(point.x - radius);
-        int x2 = std::ceil(point.x + radius);
-        int y1 = std::floor(point.y - radius);
-        int y2 = std::ceil(point.y + radius);
-        for (int x = y1; x < y2; x++) {
-            for (int y = x1; y < x2; y++) {
-                auto dist = std::sqrt(std::pow(point.y - x - 0.5f, 2.0f) +
-                                      std::pow(point.x - y - 0.5f, 2.0f));
-                dist = dist / radius / 2.0f;
-                if (dist < 1.0f)
-                    dist = std::pow(dist, cr);
-                window.at<cv::Vec3b>(x, y)[1] = std::max(255 * (1.0f - dist), float(window.at<cv::Vec3b>(x, y)[1]));
-            }
-        }
+        draw_dot(point, window, cv::Vec3b(0, 255, 0), true);
     }
 }
+
 
 int main() 
 {
@@ -87,7 +98,7 @@ int main()
 
         if (control_points.size() == 4)
         {
-//            naive_bezier(control_points, window);
+            naive_bezier(control_points, window);
             bezier(control_points, window);
 
             cv::imshow("Bezier Curve", window);
