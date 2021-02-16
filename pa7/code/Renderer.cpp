@@ -3,6 +3,8 @@
 //
 
 #include <fstream>
+#include <vector>
+#include <future>
 #include "Scene.hpp"
 #include "Renderer.hpp"
 
@@ -10,6 +12,7 @@
 inline float deg2rad(const float& deg) { return deg * M_PI / 180.0; }
 
 const float EPSILON = 0.00001;
+
 
 // The main render function. This where we iterate over all pixels in the image,
 // generate primary rays and cast these rays into the scene. The content of the
@@ -24,7 +27,10 @@ void Renderer::Render(const Scene& scene)
     int m = 0;
 
     // change the spp value to change sample ammount
-    int spp = 16;
+    int spp = 32;
+    int num_threads = 32;
+    std::vector<std::future<Vector3f>> future_colors;
+
     std::cout << "SPP: " << spp << "\n";
     for (uint32_t j = 0; j < scene.height; ++j) {
         for (uint32_t i = 0; i < scene.width; ++i) {
@@ -34,9 +40,18 @@ void Renderer::Render(const Scene& scene)
             float y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
 
             Vector3f dir = normalize(Vector3f(-x, y, 1));
-            for (int k = 0; k < spp; k++){
-                framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+
+            Vector3f pixel_color(0);
+            for (int k = 0; k < spp/num_threads; k++){
+                future_colors.clear();
+                for (int t=0; t < num_threads; t++) {
+                    future_colors.emplace_back(std::async(&Scene::castRay, &scene, Ray(eye_pos, dir), 0));
+                }
+                for (auto& color: future_colors) {
+                    pixel_color += color.get();
+                }
             }
+            framebuffer[m] = pixel_color / spp;
             m++;
         }
         UpdateProgress(j / (float)scene.height);

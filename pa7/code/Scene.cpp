@@ -63,6 +63,10 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
     auto color = Vector3f(0.f);
 
     if (isect.happened) {
+        if (isect.m->hasEmission()) {
+            return isect.m->getEmission();
+        }
+
         float pdf;
         Intersection light_isect;
         sampleLight(light_isect, pdf);
