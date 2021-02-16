@@ -211,7 +211,6 @@ inline Bounds3 Triangle::getBounds() { return Union(Bounds3(v0, v1), v2); }
 inline Intersection Triangle::getIntersection(Ray ray)
 {
     Intersection inter;
-    inter.distance = std::numeric_limits<float>::max();
 
     if (dotProduct(ray.direction, normal) > 0)
         return inter;
