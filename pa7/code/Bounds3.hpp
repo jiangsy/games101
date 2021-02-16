@@ -102,7 +102,7 @@ inline bool Bounds3::IntersectP(const Ray& ray, const Vector3f& invDir,
     t_in = std::max(t_ins[0], std::max(t_ins[1], t_ins[2]));
     t_out = std::min(t_outs[0], std::min(t_outs[1], t_outs[2]));
 
-    return (t_in < t_out) && (t_out >= 0);
+    return (t_in <= t_out) && (t_out >= 0);
 }
 
 inline Bounds3 Union(const Bounds3& b1, const Bounds3& b2)
