@@ -53,12 +53,43 @@ bool Scene::trace(
         }
     }
 
-
     return (*hitObject != nullptr);
 }
 
 // Implementation of Path Tracing
 Vector3f Scene::castRay(const Ray &ray, int depth) const
 {
-    // TO DO Implement Path Tracing Algorithm here
+    auto isect = intersect(ray);
+    auto color = Vector3f(0.f);
+
+    if (isect.happened) {
+        float pdf;
+        Intersection light_isect;
+        sampleLight(light_isect, pdf);
+        auto light_line = light_isect.coords - isect.coords;
+        auto light_dir = normalize(light_line);
+        Ray test_ray = Ray(isect.coords, light_dir);
+        auto test_isect = intersect(test_ray);
+        if (norm_square(test_isect.coords - light_isect.coords) < 0.0001) {
+            auto cos_theta = dotProduct(light_dir, isect.normal);
+            auto cos_theta_p = dotProduct(-light_dir, light_isect.normal);
+            auto dist = norm_square(light_line);
+            color += light_isect.emit * cos_theta * cos_theta_p / dist *
+                    isect.m->eval(-ray.direction, light_dir, isect.normal) / pdf;
+        }
+
+        if (get_random_float() < RussianRoulette) {
+            Vector3f bounce_dir = isect.m->sample(-ray.direction, isect.normal);
+            Ray bounce_ray(isect.coords, bounce_dir);
+            auto bounce_iscet = intersect(bounce_ray);
+            if (bounce_iscet.happened && !bounce_iscet.m->hasEmission()) {
+                auto cos_theta = dotProduct(bounce_dir, isect.normal);
+                color += castRay(bounce_ray, depth) * isect.m->eval(bounce_dir, -ray.direction, isect.normal) *
+                        cos_theta / isect.m->pdf(bounce_dir, -ray.direction, isect.normal) / RussianRoulette;
+            }
+        }
+
+    }
+    return color;
 }
+

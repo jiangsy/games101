@@ -34,7 +34,7 @@ public:
     friend std::ostream & operator << (std::ostream &os, const Vector3f &v)
     { return os << v.x << ", " << v.y << ", " << v.z; }
     double       operator[](int index) const;
-    double&      operator[](int index);
+    float&      operator[](int index);
 
 
     static Vector3f Min(const Vector3f &p1, const Vector3f &p2) {
@@ -51,6 +51,9 @@ inline double Vector3f::operator[](int index) const {
     return (&x)[index];
 }
 
+inline float& Vector3f::operator[](int index) {
+    return (&x)[index];
+}
 
 class Vector2f
 {
@@ -79,6 +82,9 @@ inline Vector3f normalize(const Vector3f &v)
 
 inline float dotProduct(const Vector3f &a, const Vector3f &b)
 { return a.x * b.x + a.y * b.y + a.z * b.z; }
+
+inline float norm_square(const Vector3f &a)
+{ return dotProduct(a, a);}
 
 inline Vector3f crossProduct(const Vector3f &a, const Vector3f &b)
 {
