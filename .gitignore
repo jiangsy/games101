@@ -7,3 +7,5 @@ CMakeCache.txt
 cmake_install.cmake
 *.cbp
 Rasterizer
+cmake-build-debug/
+Makefile
