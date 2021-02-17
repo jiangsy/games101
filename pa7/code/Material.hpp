@@ -7,11 +7,22 @@
 
 #include "Vector.hpp"
 
-enum MaterialType { DIFFUSE};
+enum MaterialType {DIFFUSE, MICROFACET};
+
+
+inline float SmithG1(Vector3f v, Vector3f normal, float roughness2) {
+    float dotNV = dotProduct(v, normal);
+    return 2 * dotNV / (dotNV + std::sqrt(roughness2 + (1-roughness2) * dotNV * dotNV));
+}
+
+inline float SmithGGXMasking(Vector3f wi, Vector3f wo, Vector3f normal, float roughness2) {
+    return SmithG1(wi, normal, roughness2) * SmithG1(wo, normal, roughness2);
+}
 
 class Material{
 private:
 
+    float roughness=0.2;
     // Compute reflection direction
     Vector3f reflect(const Vector3f &I, const Vector3f &N) const
     {
@@ -89,7 +100,7 @@ public:
     MaterialType m_type;
     //Vector3f m_color;
     Vector3f m_emission;
-    float ior;
+    float ior=1.5;
     Vector3f Kd, Ks;
     float specularExponent;
     //Texture tex;
@@ -102,12 +113,13 @@ public:
     inline bool hasEmission();
 
     // sample a ray by Material properties
-    inline Vector3f sample(const Vector3f &wi, const Vector3f &N);
+    inline Vector3f sample(const Vector3f &wi, const Vector3f &N, MaterialType m_type);
     // given a ray, calculate the PdF of this ray
-    inline float pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
+    inline float pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) const;
+    inline float pdf_light(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
     // given a ray, calculate the contribution of this ray
-    inline Vector3f eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
-
+    inline Vector3f eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
+    inline Vector3f eval_diffuse(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
 };
 
 Material::Material(MaterialType t, Vector3f e){
@@ -129,49 +141,98 @@ Vector3f Material::getColorAt(double u, double v) {
 }
 
 
-Vector3f Material::sample(const Vector3f &wi, const Vector3f &N){
-    switch(m_type){
+Vector3f Material::sample(const Vector3f &wi, const Vector3f &N, MaterialType m_type){
+    switch (m_type) {
         case DIFFUSE:
         {
-            // uniform sample on the hemisphere
             float x_1 = get_random_float(), x_2 = get_random_float();
             float z = std::fabs(1.0f - 2.0f * x_1);
             float r = std::sqrt(1.0f - z * z), phi = 2 * M_PI * x_2;
             Vector3f localRay(r*std::cos(phi), r*std::sin(phi), z);
             return toWorld(localRay, N);
-            
-            break;
+        }
+        case MICROFACET:
+        {
+            float roughness2 = roughness * roughness;
+            float z1 = get_random_float(), z2 = get_random_float();
+            float theta = std::acos(std::sqrt(1-z1) / (roughness2-1.0f)*z1+1.0f);
+            float phi = 2.f * M_PI * z2;
+            Vector3f M = Vector3f(std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta));
+            M = toWorld(M, N);
+            return reflect(wi, M);
         }
     }
 }
 
-float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
+
+float Material::pdf_light(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) {
     switch(m_type){
         case DIFFUSE:
         {
-            // uniform sample probability 1 / (2 * PI)
+            return 1.f;
+        }
+        case MICROFACET:
+        {
+            float roughness2 = roughness * roughness;
+            auto M = normalize(wi + wo);
+            float dotMN = dotProduct(M, N);
+            float d2 = dotMN * dotMN * (roughness2-1) + 1;
+            return (M_PI * d2 * d2) / roughness2;
+        }
+    }
+}
+
+
+float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) const{
+    switch(m_type){
+        case DIFFUSE:
+        {
             if (dotProduct(wo, N) > 0.0f)
                 return 0.5f / M_PI;
             else
                 return 0.0f;
-            break;
+        }
+        case MICROFACET:
+        {
+            auto M = normalize(wi + wo);
+            return (dotProduct(N, wo) * dotProduct(N, M)) / std::abs(dotProduct(wo, M));
         }
     }
 }
 
-Vector3f Material::eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
+Vector3f Material::eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
     switch(m_type){
+        case MICROFACET:
+        {
+            Vector3f color(0);
+            if (dotProduct(wi, N) > 0 && dotProduct(wo, N) > 0) {
+                float kr;
+                float roughness2 = roughness * roughness;
+                auto M = normalize(wi + wo);
+                fresnel(wi, M, ior, kr);
+                float G = SmithGGXMasking(wi, wo, N, roughness2);
+                color += Ks * kr * G;
+            }
+            return color;
+        }
         case DIFFUSE:
         {
-            // calculate the contribution of diffuse   model
+            return Vector3f(0);
+        }
+    }
+}
+
+Vector3f Material::eval_diffuse(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
+    switch(m_type){
+        case MICROFACET:
+        case DIFFUSE:
+        {
             float cosalpha = dotProduct(N, wo);
-            if (cosalpha > 0.0f) {
+            if (cosalpha > -0.2f) {
                 Vector3f diffuse = Kd / M_PI;
                 return diffuse;
             }
-            else
-                return Vector3f(0.0f);
-            break;
+            return Vector3f(0);
         }
     }
 }

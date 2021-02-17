@@ -26,9 +26,10 @@ void Renderer::Render(const Scene& scene)
     Vector3f eye_pos(278, 273, -800);
     int m = 0;
 
-    // change the spp value to change sample ammount
-    int spp = 32;
-    int num_threads = 32;
+    // change the spp value to change sample amount
+    int spp = 256;
+    int num_threads = 16;
+    assert((num_threads <= spp) && (spp % num_threads == 0));
     std::vector<std::future<Vector3f>> future_colors;
 
     std::cout << "SPP: " << spp << "\n";
