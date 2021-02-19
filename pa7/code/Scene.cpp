@@ -85,8 +85,8 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
         }
 
         if (get_random_float() < RussianRoulette) {
-            float random = get_random_float();
-            if (isect.m->m_type == MICROFACET && random < 0.5) {
+            float prob_microfacet = get_random_float();
+            if (isect.m->m_type == MICROFACET && prob_microfacet < 0.5) {
                 Vector3f bounce_dir = isect.m->sample(-ray.direction, isect.normal, MICROFACET);
                 Ray bounce_ray1(isect.coords, bounce_dir);
                 auto bounce_iscet = intersect(bounce_ray1);
@@ -98,14 +98,16 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
                              ) / RussianRoulette * 2.0f;
                 }
             }
-            if (random > 0.5f) {
+            if (isect.m->m_type == DIFFUSE or prob_microfacet > 0.5f) {
+                auto inv_microfacet_prob = isect.m->m_type == DIFFUSE ? 1.0f : 2.0f;
                 Vector3f bounce_dir = isect.m->sample(-ray.direction, isect.normal, DIFFUSE);
                 Ray bounce_ray2(isect.coords, bounce_dir);
                 auto bounce_iscet = intersect(bounce_ray2);
                 if (bounce_iscet.happened && !bounce_iscet.m->hasEmission()) {
                     auto cos_theta = dotProduct(bounce_dir, isect.normal);
-                    color += castRay(bounce_ray2, depth) * cos_theta * 2.0f / RussianRoulette *
-                            isect.m->eval_diffuse(bounce_dir, -ray.direction, isect.normal) * 2 * M_PI;
+                    color += castRay(bounce_ray2, depth) * cos_theta / RussianRoulette *
+                            isect.m->eval_diffuse(bounce_dir, -ray.direction, isect.normal) * 2 * M_PI *
+                            inv_microfacet_prob;
                 }
             }
         }
