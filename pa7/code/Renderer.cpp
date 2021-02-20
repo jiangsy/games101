@@ -27,8 +27,8 @@ void Renderer::Render(const Scene& scene)
     int m = 0;
 
     // change the spp value to change sample amount
-    int spp = 256;
-    int num_threads = 16;
+    int spp = 16;
+    int num_threads = 8;
     assert((num_threads <= spp) && (spp % num_threads == 0));
     std::vector<std::future<Vector3f>> future_colors;
 

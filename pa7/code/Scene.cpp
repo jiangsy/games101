@@ -79,34 +79,34 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
             auto cos_theta_p = dotProduct(-light_dir, light_isect.normal);
             auto dist = norm_square(light_line);
             color += light_isect.emit * cos_theta_p * cos_theta / dist /
-                     light_pdf * (isect.m->eval_microfacet(-ray.direction, light_dir, isect.normal) /
-                     isect.m->pdf_light(-ray.direction, light_dir, isect.normal)  +
-                     isect.m->eval_diffuse(-ray.direction, light_dir, isect.normal) );
+                     light_pdf * (isect.m->eval_microfacet(-ray.direction, light_dir, isect.normal, false)
+                     + isect.m->eval_diffuse(-ray.direction, light_dir, isect.normal));
         }
 
         if (get_random_float() < RussianRoulette) {
             float prob_microfacet = get_random_float();
             if (isect.m->m_type == MICROFACET && prob_microfacet < 0.5) {
                 Vector3f bounce_dir = isect.m->sample(-ray.direction, isect.normal, MICROFACET);
-                Ray bounce_ray1(isect.coords, bounce_dir);
-                auto bounce_iscet = intersect(bounce_ray1);
+                Ray bounce_ray(isect.coords, bounce_dir);
+                auto bounce_iscet = intersect(bounce_ray);
                 if (bounce_iscet.happened && !bounce_iscet.m->hasEmission()) {
                     auto cos_theta = dotProduct(bounce_dir, isect.normal);
-                    color += castRay(bounce_ray1, depth) *
-                             cos_theta * (isect.m->eval_microfacet(bounce_dir, -ray.direction, isect.normal) /
-                                          isect.m->pdf(bounce_dir, -ray.direction, isect.normal)
-                             ) / RussianRoulette * 2.0f;
+                    auto ray_rad = castRay(bounce_ray, depth);
+                    color += ray_rad  *
+                             cos_theta * isect.m->eval_microfacet(bounce_dir, -ray.direction, isect.normal, true)
+                              / RussianRoulette * 2.0f;
                 }
             }
             if (isect.m->m_type == DIFFUSE or prob_microfacet > 0.5f) {
                 auto inv_microfacet_prob = isect.m->m_type == DIFFUSE ? 1.0f : 2.0f;
                 Vector3f bounce_dir = isect.m->sample(-ray.direction, isect.normal, DIFFUSE);
-                Ray bounce_ray2(isect.coords, bounce_dir);
-                auto bounce_iscet = intersect(bounce_ray2);
+                Ray bounce_ray(isect.coords, bounce_dir);
+                auto bounce_iscet = intersect(bounce_ray);
                 if (bounce_iscet.happened && !bounce_iscet.m->hasEmission()) {
                     auto cos_theta = dotProduct(bounce_dir, isect.normal);
-                    color += castRay(bounce_ray2, depth) * cos_theta / RussianRoulette *
-                            isect.m->eval_diffuse(bounce_dir, -ray.direction, isect.normal) * 2 * M_PI *
+                    color += castRay(bounce_ray, depth) * cos_theta / RussianRoulette *
+                            isect.m->eval_diffuse(bounce_dir, -ray.direction, isect.normal) /
+                            isect.m->pdf(bounce_dir, -ray.direction, isect.normal) *
                             inv_microfacet_prob;
                 }
             }

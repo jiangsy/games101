@@ -116,9 +116,8 @@ public:
     inline Vector3f sample(const Vector3f &wi, const Vector3f &N, MaterialType m_type);
     // given a ray, calculate the PdF of this ray
     inline float pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) const;
-    inline float pdf_light(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
     // given a ray, calculate the contribution of this ray
-    inline Vector3f eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
+    inline Vector3f eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N, bool importance_sampling);
     inline Vector3f eval_diffuse(const Vector3f &wi, const Vector3f &wo, const Vector3f &N);
 };
 
@@ -165,42 +164,15 @@ Vector3f Material::sample(const Vector3f &wi, const Vector3f &N, MaterialType m_
 }
 
 
-float Material::pdf_light(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) {
-    switch(m_type){
-        case DIFFUSE:
-        {
-            return 1.f;
-        }
-        case MICROFACET:
-        {
-            float roughness2 = roughness * roughness;
-            auto M = normalize(wi + wo);
-            float dotMN = dotProduct(M, N);
-            float d2 = dotMN * dotMN * (roughness2-1) + 1;
-            return (M_PI * d2 * d2) / roughness2;
-        }
-    }
-}
-
-
 float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N) const{
     switch(m_type){
         case DIFFUSE:
-        {
-            if (dotProduct(wo, N) > 0.0f)
-                return 0.5f / M_PI;
-            else
-                return 0.0f;
-        }
         case MICROFACET:
-        {
-            auto M = normalize(wi + wo);
-            return (dotProduct(N, wo) * dotProduct(N, M)) / std::abs(dotProduct(wo, M));
-        }
+            return 0.5f / M_PI;
     }
 }
 
-Vector3f Material::eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
+Vector3f Material::eval_microfacet(const Vector3f &wi, const Vector3f &wo, const Vector3f &N, bool importance_sampling){
     switch(m_type){
         case MICROFACET:
         {
@@ -211,7 +183,15 @@ Vector3f Material::eval_microfacet(const Vector3f &wi, const Vector3f &wo, const
                 auto M = normalize(wi + wo);
                 fresnel(wi, M, ior, kr);
                 float G = SmithGGXMasking(wi, wo, N, roughness2);
-                color += Ks * kr * G;
+                float D;
+                if (!importance_sampling) {
+                    float dotMN = dotProduct(M, N);
+                    float d2 = dotMN * dotMN * (roughness2 - 1) + 1;
+                    D = roughness2 / (M_PI * d2 * d2);
+                } else {
+                    D =  (dotProduct(N, wo) * dotProduct(N, M)) / std::abs(dotProduct(wo, M)) ;
+                }
+                color += Ks * kr * G * D;
             }
             return color;
         }
@@ -228,11 +208,11 @@ Vector3f Material::eval_diffuse(const Vector3f &wi, const Vector3f &wo, const Ve
         case DIFFUSE:
         {
             float cosalpha = dotProduct(N, wo);
-            if (cosalpha > -0.2f) {
+            if (cosalpha > 0) {
                 Vector3f diffuse = Kd / M_PI;
                 return diffuse;
             }
-            return Vector3f(0);
+            return Vector3f(1e-4);
         }
     }
 }
