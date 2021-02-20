@@ -58,6 +58,7 @@ private:
   AppConfig config;
 
   Rope *ropeEuler;
+  Rope *ropeSemiImplicitEuler;
   Rope *ropeVerlet;
 
   size_t screen_width;

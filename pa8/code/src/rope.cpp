@@ -11,7 +11,7 @@ namespace CGL {
 
     Rope::Rope(Vector2D start, Vector2D end, int num_nodes, float node_mass, float k, vector<int> pinned_nodes)
     {
-        float kd = 0.5;
+        float kd = 0.05;
         auto interval = (end - start) / (num_nodes - 1);
         auto current_start(start);
         for (int i=0; i<num_nodes; i++) {
@@ -27,6 +27,38 @@ namespace CGL {
     }
 
     void Rope::simulateEuler(float delta_t, Vector2D gravity)
+    {
+        for (auto &s : springs)
+        {
+            auto m1 = s->m1, m2 = s->m2;
+            auto vec = m2->position - m1->position;
+            auto dir = vec.unit();
+            auto length = vec.norm();
+            auto force = s->k * dir * (length - s->rest_length);
+            m1->forces += force;
+            m2->forces -= force;
+
+            auto proj_velocity = dot(m2->velocity - m1->velocity, dir);
+            auto damping_force = s->kd * proj_velocity * dir;
+            m1->forces += damping_force;
+            m2->forces -= damping_force;
+        }
+
+        for (auto &m : masses)
+        {
+            if (!m->pinned)
+            {
+                m->forces += gravity * m->mass;
+                m->position += m->velocity * delta_t;
+                m->velocity += (m->forces / m->mass) * delta_t;
+            }
+
+            // Reset all forces on each mass
+            m->forces = Vector2D(0, 0);
+        }
+    }
+
+    void Rope::simulateSemiImplicitEuler(float delta_t, Vector2D gravity)
     {
         for (auto &s : springs)
         {
@@ -75,9 +107,8 @@ namespace CGL {
             {
                 Vector2D temp_position = m->position;
                 m->forces += gravity * m->mass;
-                m->position = m->position + (1-0.00002) * (m->position - m->last_position) +
+                m->position = m->position + (1-0.0005 * delta_t) * (m->position - m->last_position) +
                         (m->forces / m->mass) * delta_t * delta_t;
-                std::cout << (m->forces / m->mass) * delta_t * delta_t << std::endl;
                 m->last_position = temp_position;
             }
             m->forces = Vector2D(0, 0);
